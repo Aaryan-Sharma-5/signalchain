@@ -1,0 +1,27 @@
+{
+    "company": "PayU",
+    "sector": "B2B Fintech / Payments",
+    "analysis_date": "2026-06-13",
+    "financials": {
+        "revenue_growth_yoy": 0.06,
+        "burn_rate_monthly_cr": 58.0,
+        "runway_months": 18,
+        "last_valuation_usd_bn": 2.6
+    },
+    "engineering_signals": {
+        "github_repo": "payu-intrepos/PayUIndia-PaymentsSDK-Android",
+        "commit_velocity_30d": 96,
+        "contributor_count": 22,
+        "open_issues": 211,
+        "stars_growth_30d": 9
+    },
+    "news_items": [
+        { "headline": "PayU India ramps hiring across sales and risk despite flat topline", "sentiment": "neutral", "date": "2026-05-25" },
+        { "headline": "Parent Prosus signals continued investment in India payments arm", "sentiment": "positive", "date": "2026-05-09" },
+        { "headline": "Growth slows as competition compresses take rates", "sentiment": "negative", "date": "2026-04-22" }
+    ],
+    "headcount_signals": {
+        "total_employees_estimate": 2400,
+        "linkedin_growth_90d_pct": 0.12
+    }
+}

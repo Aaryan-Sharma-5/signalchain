@@ -1,0 +1,27 @@
+{
+    "company": "Cashfree",
+    "sector": "B2B Fintech / Payments",
+    "analysis_date": "2026-06-13",
+    "financials": {
+        "revenue_growth_yoy": 0.18,
+        "burn_rate_monthly_cr": 19.0,
+        "runway_months": 24,
+        "last_valuation_usd_bn": 0.9
+    },
+    "engineering_signals": {
+        "github_repo": "cashfree/cashfree-pg-sdk-nodejs",
+        "commit_velocity_30d": 173,
+        "contributor_count": 31,
+        "open_issues": 57,
+        "stars_growth_30d": 24
+    },
+    "news_items": [
+        { "headline": "RBI restrictions on new merchant onboarding partially lifted for Cashfree", "sentiment": "negative", "date": "2026-05-20" },
+        { "headline": "Cashfree expands payout rails to UAE corridor", "sentiment": "positive", "date": "2026-05-03" },
+        { "headline": "Compliance overhaul costs weigh on near-term margins", "sentiment": "negative", "date": "2026-04-18" }
+    ],
+    "headcount_signals": {
+        "total_employees_estimate": 920,
+        "linkedin_growth_90d_pct": 0.01
+    }
+}
