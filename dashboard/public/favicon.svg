@@ -1,0 +1,33 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="chain" x1="20" y1="14" x2="44" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b83e6"/>
+      <stop offset="1" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.6">
+      <stop offset="0" stop-color="#7f77dd" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#7f77dd" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- tile -->
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#0b0b14"/>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#glow)"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="14.25" stroke="#7f77dd" stroke-opacity="0.4" stroke-width="1.5"/>
+
+  <!-- links between the three nodes (the provenance chain) -->
+  <path d="M21 18 L43 32 L21 46" stroke="url(#chain)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- three agent nodes -->
+  <circle cx="21" cy="18" r="7.5" fill="#0b0b14"/>
+  <circle cx="21" cy="18" r="7" fill="#8b83e6"/>
+  <circle cx="43" cy="32" r="7.5" fill="#0b0b14"/>
+  <circle cx="43" cy="32" r="7" fill="#5fb6cf"/>
+  <circle cx="21" cy="46" r="7.5" fill="#0b0b14"/>
+  <circle cx="21" cy="46" r="7" fill="#2dd4bf"/>
+
+  <!-- lit cores -->
+  <circle cx="21" cy="18" r="2.4" fill="#ffffff" fill-opacity="0.92"/>
+  <circle cx="43" cy="32" r="2.4" fill="#ffffff" fill-opacity="0.92"/>
+  <circle cx="21" cy="46" r="2.4" fill="#ffffff" fill-opacity="0.92"/>
+</svg>

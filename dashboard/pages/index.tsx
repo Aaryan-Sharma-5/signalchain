@@ -52,7 +52,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>SignalChain — Verifiable Due Diligence</title>
+        <title>SignalChain</title>
       </Head>
       <div style={{ display: "flex", height: "100vh", background: "var(--bg)" }}>
         {/* LEFT */}
