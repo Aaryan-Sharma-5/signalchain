@@ -125,11 +125,19 @@ export async function recentMemories(): Promise<
         maxDistance: 1.0,
       } as any)
     );
-    return recallItems(res).map((m) => ({
-      text: m.text ?? m.content,
-      blob_id: m.blob_id,
-      distance: m.distance,
-    }));
+    // Re-running the same company appends a fresh near-identical insight each time,
+    // so collapse duplicates by the insight text (the part before the "[tags]"),
+    // keeping the most relevant (first) occurrence.
+    const seen = new Set<string>();
+    const deduped: Array<{ text: string; blob_id?: string; distance?: number }> = [];
+    for (const m of recallItems(res)) {
+      const text: string = m.text ?? m.content ?? "";
+      const insightKey = text.split(" [")[0].trim().toLowerCase().replace(/\s+/g, " ");
+      if (!insightKey || seen.has(insightKey)) continue;
+      seen.add(insightKey);
+      deduped.push({ text, blob_id: m.blob_id, distance: m.distance });
+    }
+    return deduped;
   } catch (e) {
     // Non-fatal: the memory panel just shows empty during a relayer blip rather than erroring.
     console.warn(`[memwal] recentMemories failed: ${(e as Error).message}`);

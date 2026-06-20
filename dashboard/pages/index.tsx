@@ -1,9 +1,11 @@
 import Head from "next/head";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import BlobInspector from "@/components/BlobInspector";
 import MemoryPanel from "@/components/MemoryPanel";
 import PipelineGraph, { PipelineEvent } from "@/components/PipelineGraph";
 import ReportModal from "@/components/ReportModal";
+import Timeline, { RunRecord } from "@/components/Timeline";
+import { AlertIcon, FileTextIcon, PlayIcon } from "@/components/icons";
 import { ORCHESTRATOR_URL } from "@/lib/config";
 
 const COMPANIES = ["Razorpay", "Cashfree", "PayU"];
@@ -17,6 +19,9 @@ export default function Home() {
   const [reportBlobId, setReportBlobId] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [runs, setRuns] = useState<RunRecord[]>([]);
+  // Blobs collected for the in-flight run, finalized into `runs` when it completes.
+  const currentRun = useRef<RunRecord | null>(null);
 
   async function startPipeline() {
     setStartError(null);
@@ -24,6 +29,11 @@ export default function Home() {
     setReportBlobId(null);
     setShowReport(false);
     setIsRunning(true);
+    currentRun.current = {
+      id: `${company}-${Date.now()}`,
+      company,
+      time: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+    };
     try {
       const r = await fetch(
         `${ORCHESTRATOR_URL}/run-pipeline?company=${encodeURIComponent(company)}&sector=${encodeURIComponent(SECTOR)}`,
@@ -39,13 +49,24 @@ export default function Home() {
   }
 
   function onPipelineEvent(event: PipelineEvent) {
+    // Record each stage's blob into the in-flight run.
+    if (event.status === "complete" && event.blob_id && currentRun.current) {
+      (currentRun.current as any)[event.stage] = event.blob_id;
+    }
+
     if (event.stage === "report_minter" && event.status === "complete") {
       setIsRunning(false);
       // Surface the "View Full Report" button (not the modal) so the node-by-node
       // verification flow isn't interrupted — the analyst opens the report on demand.
       if (event.blob_id) setReportBlobId(event.blob_id);
+      if (currentRun.current) {
+        const finished = currentRun.current;
+        setRuns((prev) => [...prev, finished]);
+        currentRun.current = null;
+      }
     } else if (event.stage === "error") {
       setIsRunning(false);
+      currentRun.current = null;
     }
   }
 
@@ -109,9 +130,19 @@ export default function Home() {
           </div>
 
           <button onClick={startPipeline} disabled={isRunning} style={{ ...runBtn, opacity: isRunning ? 0.6 : 1, cursor: isRunning ? "not-allowed" : "pointer" }}>
-            {isRunning ? "Running pipeline…" : `▶ Analyze ${company}`}
+            {isRunning ? (
+              "Running pipeline…"
+            ) : (
+              <>
+                <PlayIcon /> Analyze {company}
+              </>
+            )}
           </button>
-          {startError && <div style={{ fontSize: 12, color: "var(--red)" }}>⚠ {startError}</div>}
+          {startError && (
+            <div style={{ fontSize: 12, color: "var(--red)", display: "flex", alignItems: "center", gap: 6 }}>
+              <AlertIcon /> {startError}
+            </div>
+          )}
 
           <div style={{ height: 1, background: "var(--border)" }} />
 
@@ -121,13 +152,14 @@ export default function Home() {
         {/* CENTER */}
         <main
           style={{
+            position: "relative",
             flex: 1,
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: 32,
+            padding: "32px 32px 40px",
           }}
         >
           <div style={{ position: "absolute", top: 20, fontSize: 12.5, color: "var(--muted)" }}>
@@ -137,8 +169,14 @@ export default function Home() {
 
           {reportBlobId && !isRunning && (
             <button onClick={() => setShowReport(true)} style={viewReportBtn}>
-              📄 View Full Report
+              <FileTextIcon size={17} /> View Full Report
             </button>
+          )}
+
+          {runs.length > 0 && (
+            <div style={{ position: "absolute", bottom: 20, left: 32, right: 32, display: "flex", justifyContent: "center" }}>
+              <Timeline runs={runs} onSelect={setSelectedBlobId} />
+            </div>
           )}
         </main>
 
@@ -187,6 +225,10 @@ const selectBtn: React.CSSProperties = {
 };
 
 const runBtn: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
   padding: "12px 14px",
   borderRadius: 10,
   border: "1px solid rgba(127,119,221,0.6)",
@@ -198,6 +240,9 @@ const runBtn: React.CSSProperties = {
 };
 
 const viewReportBtn: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 9,
   marginTop: 36,
   padding: "14px 28px",
   borderRadius: 10,

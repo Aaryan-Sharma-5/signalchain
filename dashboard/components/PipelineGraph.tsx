@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AlertIcon } from "@/components/icons";
 import { ORCHESTRATOR_URL, truncateBlobId } from "@/lib/config";
 
 type Status = "idle" | "running" | "complete" | "error";
@@ -47,13 +48,22 @@ interface Props {
 export default function PipelineGraph({ runId, onNodeClick, onEvent }: Props) {
   const [states, setStates] = useState<StatesByStage>(emptyStates());
   const [error, setError] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [confidence, setConfidence] = useState<number | null>(null);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
+
+  function copyBlobId(key: string, blobId: string) {
+    navigator.clipboard?.writeText(blobId);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1200);
+  }
 
   useEffect(() => {
     if (!runId) return;
     // New run: reset graph, mark first node running.
     setError(null);
+    setConfidence(null);
     setStates({
       signal_harvester: { status: "running" },
       thesis_builder: { status: "idle" },
@@ -100,6 +110,15 @@ export default function PipelineGraph({ runId, onNodeClick, onEvent }: Props) {
           }
           return next;
         });
+        // Pull the confidence score off the thesis blob for the node gauge.
+        if (event.stage === "thesis_builder" && event.blob_id) {
+          fetch(`/api/resolve/${event.blob_id}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+              if (d && typeof d.confidence_score === "number") setConfidence(d.confidence_score);
+            })
+            .catch(() => {});
+        }
         if (event.stage === "report_minter") source.close();
       }
     };
@@ -134,16 +153,23 @@ export default function PipelineGraph({ runId, onNodeClick, onEvent }: Props) {
           <filter id="glow-purple" x="-40%" y="-40%" width="180%" height="180%">
             <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#7f77dd" floodOpacity="0.55" />
           </filter>
+          <filter id="glow-amber" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#f5b14b" floodOpacity="0.5" />
+          </filter>
         </defs>
 
-        {/* connectors + edge labels */}
+        {/* connectors: dim when idle, animated purple flow while data moves to the
+            next stage, solid once the downstream blob lands. Edge label fades in
+            only after the upstream blob actually exists. */}
         {NODES.slice(0, -1).map((n, i) => {
           const x1 = positions[i] + NODE_W;
           const x2 = positions[i + 1];
           const y = TOP + NODE_H / 2;
           const midX = (x1 + x2) / 2;
           const label = i === 0 ? "blob_id_1" : "blob_id_2";
-          const done = states[n.key].status === "complete";
+          const srcDone = states[n.key].status === "complete";
+          const nextStatus = states[NODES[i + 1].key].status;
+          const flowing = srcDone && nextStatus === "running";
           return (
             <g key={`edge-${i}`}>
               <line
@@ -151,13 +177,25 @@ export default function PipelineGraph({ runId, onNodeClick, onEvent }: Props) {
                 y1={y}
                 x2={x2 - 6}
                 y2={y}
-                stroke={done ? "var(--accent)" : "var(--border)"}
-                strokeWidth={2}
+                stroke={srcDone ? "var(--accent)" : "var(--border)"}
+                strokeWidth={flowing ? 2.5 : 2}
                 markerEnd="url(#arrow)"
+                className={flowing ? "flow-line" : undefined}
               />
-              <text x={midX} y={y - 12} textAnchor="middle" fontSize="11" fill="var(--muted)" fontFamily="monospace">
-                {label}
-              </text>
+              {srcDone && (
+                <text
+                  key={`lbl-${label}`}
+                  x={midX}
+                  y={y - 12}
+                  textAnchor="middle"
+                  fontSize="11"
+                  fill={flowing ? "var(--accent)" : "var(--muted)"}
+                  fontFamily="monospace"
+                  className="edge-label-in"
+                >
+                  {label}
+                </text>
+              )}
             </g>
           );
         })}
@@ -178,7 +216,14 @@ export default function PipelineGraph({ runId, onNodeClick, onEvent }: Props) {
                   : "var(--border-strong)";
           const fill =
             st.status === "complete" ? (isTeal ? "var(--teal-soft)" : "var(--accent-soft)") : FILL[st.status];
-          const glow = st.status === "complete" ? (isTeal ? "url(#glow-teal)" : "url(#glow-purple)") : undefined;
+          const glow =
+            st.status === "complete"
+              ? isTeal
+                ? "url(#glow-teal)"
+                : "url(#glow-purple)"
+              : st.status === "running"
+                ? "url(#glow-amber)"
+                : undefined;
           return (
             <g
               key={n.key}
@@ -193,7 +238,9 @@ export default function PipelineGraph({ runId, onNodeClick, onEvent }: Props) {
                 fill={fill}
                 stroke={strokeColor}
                 strokeWidth={1.5}
+                strokeDasharray={st.status === "idle" ? "6 6" : undefined}
                 filter={glow}
+                opacity={st.status === "idle" ? 0.7 : 1}
                 className={st.status === "running" ? "node-pulse" : undefined}
               />
               <text x={16} y={26} fontSize="11" fill="var(--muted)" fontFamily="monospace">
@@ -204,9 +251,53 @@ export default function PipelineGraph({ runId, onNodeClick, onEvent }: Props) {
               </text>
               {/* status / blob id */}
               {st.status === "complete" && st.blobId ? (
-                <text x={16} y={80} fontSize="12.5" fill={n.color} fontFamily="monospace">
-                  {truncateBlobId(st.blobId)}
-                </text>
+                <g
+                  className="blob-chip-hit"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyBlobId(n.key, st.blobId!);
+                  }}
+                >
+                  <title>Click to copy full blob ID</title>
+                  <rect
+                    className="blob-chip-bg"
+                    x={14}
+                    y={66}
+                    width={168}
+                    height={22}
+                    rx={5}
+                    fill="rgba(255,255,255,0.04)"
+                    stroke="var(--border)"
+                    strokeWidth={1}
+                  />
+                  <text x={24} y={81} fontSize="12" fill={n.color} fontFamily="monospace">
+                    {copiedKey === n.key ? "copied!" : truncateBlobId(st.blobId, 16)}
+                  </text>
+                  {copiedKey === n.key ? (
+                    <g
+                      transform="translate(166, 70) scale(0.5)"
+                      fill="none"
+                      stroke="var(--teal)"
+                      strokeWidth={3.2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </g>
+                  ) : (
+                    <g
+                      transform="translate(166, 70) scale(0.5)"
+                      fill="none"
+                      stroke="var(--muted)"
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="9" y="9" width="11" height="11" rx="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </g>
+                  )}
+                </g>
               ) : st.status === "running" ? (
                 <>
                   {/* spinner */}
@@ -236,13 +327,23 @@ export default function PipelineGraph({ runId, onNodeClick, onEvent }: Props) {
                   </text>
                 </>
               ) : (
-                <text x={16} y={80} fontSize="12" fill="var(--muted)" fontStyle="italic">
-                  {st.status === "error" ? "failed" : "idle"}
+                <text
+                  x={16}
+                  y={80}
+                  fontSize="12"
+                  fill={st.status === "error" ? "var(--red)" : "var(--faint)"}
+                  fontStyle="italic"
+                >
+                  {st.status === "error" ? "failed" : "Waiting for run…"}
                 </text>
+              )}
+              {/* confidence gauge on the thesis node once its blob is resolved */}
+              {n.key === "thesis_builder" && st.status === "complete" && confidence != null && (
+                <ConfidenceGauge score={confidence} cx={NODE_W - 30} cy={32} />
               )}
               {clickable && (
                 <text x={16} y={98} fontSize="10.5" fill="var(--muted)">
-                  click to inspect ↗
+                  click to inspect →
                 </text>
               )}
             </g>
@@ -268,11 +369,41 @@ export default function PipelineGraph({ runId, onNodeClick, onEvent }: Props) {
             borderRadius: 8,
             fontSize: 13,
             maxWidth: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          ⚠ {error}
+          <AlertIcon /> {error}
         </div>
       )}
     </div>
+  );
+}
+
+/** Radial confidence gauge (0-1) rendered on the thesis node after completion. */
+function ConfidenceGauge({ score, cx, cy }: { score: number; cx: number; cy: number }) {
+  const r = 14;
+  const C = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(1, score));
+  return (
+    <g transform={`translate(${cx}, ${cy})`}>
+      <circle r={r} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={4} />
+      <circle
+        r={r}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth={4}
+        strokeLinecap="round"
+        strokeDasharray={`${pct * C} ${C}`}
+        transform="rotate(-90)"
+      />
+      <text textAnchor="middle" y={4} fontSize="11" fontWeight={700} fill="var(--text)">
+        {Math.round(pct * 100)}
+      </text>
+      <text textAnchor="middle" y={r + 12} fontSize="8.5" fill="var(--muted)" fontFamily="monospace">
+        confidence
+      </text>
+    </g>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AlertIcon } from "@/components/icons";
 import { AGENT2_URL } from "@/lib/config";
 
 interface RawMemory {
@@ -49,7 +50,18 @@ export default function MemoryPanel({ active }: Props) {
       const r = await fetch(`${AGENT2_URL}/memories`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const json = await r.json();
-      const parsed: ParsedMemory[] = (json.memories ?? []).map(parseMemory);
+      const allParsed: ParsedMemory[] = (json.memories ?? []).map(parseMemory);
+
+      // Defensive dedupe (also done server-side): re-running a company appends an
+      // identical insight, which must not show as a repeated card.
+      const byInsight = new Set<string>();
+      const parsed: ParsedMemory[] = [];
+      for (const p of allParsed) {
+        const k = `${p.company}|${p.insight}`.toLowerCase().replace(/\s+/g, " ").trim();
+        if (byInsight.has(k)) continue;
+        byInsight.add(k);
+        parsed.push(p);
+      }
 
       const fresh = parsed.filter((p) => !seenRef.current.has(p.key)).map((p) => p.key);
       if (markNew && seenRef.current.size > 0 && fresh.length) {
@@ -85,8 +97,15 @@ export default function MemoryPanel({ active }: Props) {
         <span style={{ fontSize: 11, color: "var(--accent)" }}>({memories.length})</span>
       </div>
 
-      <div style={{ overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 2 }}>
-        {error && <div style={{ fontSize: 12, color: "var(--red)" }}>⚠ {error}</div>}
+      <div
+        className="memwal-scroll"
+        style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 4 }}
+      >
+        {error && (
+          <div style={{ fontSize: 12, color: "var(--red)", display: "flex", alignItems: "center", gap: 6 }}>
+            <AlertIcon /> {error}
+          </div>
+        )}
         {!error && memories.length === 0 && (
           <div style={{ fontSize: 12.5, color: "var(--muted)", fontStyle: "italic" }}>
             No prior insights yet. Run a company to populate sector memory.

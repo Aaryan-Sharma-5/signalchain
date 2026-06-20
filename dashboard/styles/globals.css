@@ -78,6 +78,18 @@ button {
   background: transparent;
 }
 
+/* MemWal panel: thin accent-tinted scrollbar */
+.memwal-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.memwal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(127, 119, 221, 0.3);
+  border-radius: 6px;
+}
+.memwal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(127, 119, 221, 0.5);
+}
+
 /* ---- reusable surfaces ---- */
 .surface {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)) , var(--panel);
@@ -154,6 +166,39 @@ button {
 }
 .card-flash {
   animation: flash-border 2.6s ease-out;
+}
+
+/* ---- pipeline arrow: traveling data flow while a stage runs ---- */
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+.flow-line {
+  stroke-dasharray: 5 13;
+  animation: flow-dash 0.85s linear infinite;
+}
+
+/* edge labels fade in once the upstream blob exists */
+@keyframes edge-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.edge-label-in {
+  animation: edge-fade 0.55s ease forwards;
+}
+
+/* blob-id chip on a graph node: brief "copied" affordance */
+.blob-chip-hit {
+  cursor: pointer;
+}
+.blob-chip-hit:hover .blob-chip-bg {
+  stroke: var(--border-strong);
+  fill: rgba(255, 255, 255, 0.07);
 }
 
 /* ---- markdown report ---- */

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { AlertIcon, CheckIcon, CloseIcon } from "@/components/icons";
 import { WALRUS_AGGREGATOR_PUBLIC } from "@/lib/config";
 
 interface Props {
@@ -74,8 +75,8 @@ export default function ReportModal({ blobId, onClose }: Props) {
             <div style={{ fontSize: 16, fontWeight: 700 }}>
               {data?.company ? `${data.company} — Due Diligence Report` : "Due Diligence Report"}
             </div>
-            <div style={{ fontSize: 11.5, color: "var(--teal)", marginTop: 2 }}>
-              ✓ Verified on Walrus ·{" "}
+            <div style={{ fontSize: 11.5, color: "var(--teal)", marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+              <CheckIcon /> Verified on Walrus ·{" "}
               <a href={aggregatorUrl} target="_blank" rel="noreferrer" style={{ fontFamily: "monospace" }}>
                 {blobId.slice(0, 16)}…
               </a>
@@ -83,15 +84,19 @@ export default function ReportModal({ blobId, onClose }: Props) {
           </div>
           <button
             onClick={onClose}
-            style={{ background: "var(--panel-2)", border: "1px solid var(--border)", color: "var(--muted)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13 }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--panel-2)", border: "1px solid var(--border)", color: "var(--muted)", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13 }}
           >
-            ✕ Close
+            <CloseIcon /> Close
           </button>
         </div>
 
         {/* body */}
         <div style={{ padding: "22px 28px" }}>
-          {err && <div style={{ color: "var(--red)" }}>⚠ {err}</div>}
+          {err && (
+            <div style={{ color: "var(--red)", display: "flex", alignItems: "center", gap: 6 }}>
+              <AlertIcon /> {err}
+            </div>
+          )}
           {!data && !err && <div style={{ color: "var(--muted)" }}>Loading report from Walrus…</div>}
           {data?.report_markdown && (
             <div className="markdown-body">
